@@ -1,10 +1,11 @@
-version: "3.9"
-
 services:
   app:
-    image: python:3.11
-    container_name: lab1_app
+    build: .
+    container_name: http_server_lab1
+    ports:
+      - "8080:8080"
     volumes:
-      - .:/app
+      - ./app:/app
     working_dir: /app
-    command: python main.py
+    command: python -u server.py content
+

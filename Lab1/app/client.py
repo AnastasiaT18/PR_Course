@@ -24,9 +24,8 @@ def run_client():
         response += data
 
     response_headers = response.split(b"\r\n\r\n")[0].decode()
-    print("this is headers, ",response_headers)
     body = response.split(b"\r\n\r\n", 1)[1]
-    print("this is the body: ", body)
+    
     if "Content-Type: text/html" in response_headers:
         print(body.decode())
         print("HTML content received, not saving to file.")

@@ -23,18 +23,17 @@ def start_server():
         data = connectionSocket.recv(1024).decode()
 
         request = data.split("\r\n")[0]
-        print("this is the request", request, flush=True)
-        requested_file = request.split(" ")[1]
-        print("this is req file", requested_file, flush=True)
+
+        parts = request.split(" ")
+        if len(parts) < 2:
+            continue  # skip invalid or empty requests
+        requested_file = parts[1]
+        
         requested_file_path = os.path.join(content_dir, requested_file[1:])
-        print("this is req file path", requested_file_path, flush=True)
-        print("Absolute path:", os.path.abspath(requested_file_path),   flush=True)
-        print("isdir?", os.path.isdir(requested_file_path), flush=True)
 
         ext = os.path.splitext(requested_file_path)[1]
-        
+    
         content_type = content_types.get(ext, None)
-
 
         print(f"Requested file: {requested_file_path}")
 
@@ -69,9 +68,7 @@ def start_server():
                     connectionSocket.sendall(body.encode())  # body is str
 
         elif os.path.isdir(requested_file_path):
-            print("it's a directory,", flush=True)
             contents = os.listdir(requested_file_path)
-            print(contents)
             items_html = ""
             for item in contents:
                 if requested_file == "/":

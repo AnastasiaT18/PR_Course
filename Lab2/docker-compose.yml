@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    container_name: http_server_lab2
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app:/app
+    working_dir: /app
+    command: python -u server.py content
+

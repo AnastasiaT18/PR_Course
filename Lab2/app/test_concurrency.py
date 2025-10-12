@@ -6,7 +6,7 @@ def request_file(file):
     subprocess.run(["python", "client.py", "localhost", "8080", file, "./downloads"])
 
 
-files = ["/filepractica.pdf", "/image1.png", "/index.html", "/contents_subfolder/dogphoto.png", "/contents_subfolder/GuidebookPoznan.pdf"] * 2
+files = ["/filepractica.pdf", "/image1.png", "/index.html", "/contents_subfolder/dogphoto.png", "/contents_subfolder/GuidebookPoznan.pdf"] * 6
 threads = []
 
 start = time.time()

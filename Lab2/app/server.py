@@ -9,6 +9,9 @@ content_types = {
     ".pdf": "application/pdf"
 }
 
+requests_per_file = {}  # empty initially
+counter_lock = threading.Lock()  
+
 
 def handle_request(connectionSocket, adr, content_dir):
     print(f"Connection from {adr}")
@@ -30,9 +33,17 @@ def handle_request(connectionSocket, adr, content_dir):
     
     content_type = content_types.get(ext, None)
 
+    with counter_lock:
+        current_count = requests_per_file.get(requested_file, 0)
+        ##forcing interleaving
+        time.sleep(3)
+        requests_per_file[requested_file] = current_count + 1
+
+
     print(f"Requested file: {requested_file_path}")
 
     if os.path.isfile(requested_file_path):
+
         if content_type is None:
                 
             response = (
@@ -70,7 +81,11 @@ def handle_request(connectionSocket, adr, content_dir):
                 link_path = f"/{item}"
             else:
                 link_path = f"{requested_file}/{item}"
-            items_html += f'<li><a href="{link_path}">{item}</a></li>'
+            
+            counter = requests_per_file.get(link_path, 0)
+
+
+            items_html += f'<li><a href="{link_path}">{item}</a> ---{counter} ---</li>'
 
         response_body = f"""
             <html>
@@ -115,6 +130,8 @@ def start_server():
     serverSocket.bind(('', serverPort))
     serverSocket.listen(1)
     print(f"Server listening on http://localhost:{serverPort}")
+
+   
 
     while True:
         connectionSocket, adr = serverSocket.accept()

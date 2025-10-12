@@ -10,21 +10,56 @@ content_types = {
 }
 
 requests_per_file = {}  # empty initially
-counter_lock = threading.Lock()  
+counter_lock = threading.Lock() 
+requests_per_ip = {} 
+RATE_LIMIT = 5  # max requests per minute
+WINDOW = 1
+
 
 
 def handle_request(connectionSocket, adr, content_dir):
     print(f"Connection from {adr}")
 
+    client_ip = adr[0]
+    now = time.time()
+
+
+    timestamps = requests_per_ip.get(client_ip, [])
+    timestamps = [t for t in timestamps if now - t < WINDOW]  # keep only last 60 seconds
+    
+    if len(timestamps) >= RATE_LIMIT:
+        response = (
+            "HTTP/1.1 429 Too Many Requests\r\n"
+            f"Content-Type: text/html\r\n"
+            "\r\n"
+            "<html><body><h1>429 Too Many Requests</h1></body></html>"
+        )
+
+        print(f"429")
+
+        connectionSocket.sendall(response.encode())
+        connectionSocket.close()
+        return
+
+    timestamps.append(now)
+    requests_per_ip[client_ip] = timestamps
+
     time.sleep(1)  # Simulate a delay for testing concurrency
 
     data = connectionSocket.recv(1024).decode()
 
-    request = data.split("\r\n")[0]
+    if not data.strip():
+        connectionSocket.close()
+        return
 
-    parts = request.split(" ")
-    if len(parts) < 2:
-        connectionSocket.close()  # skip invalid or empty requests
+    request_line = data.split("\r\n")[0]
+    parts = request_line.split(" ")
+
+    # Defensive check for malformed or partial requests
+    if len(parts) < 2 or not parts[1].startswith("/"):
+        connectionSocket.close()
+        return
+
     requested_file = parts[1]
         
     requested_file_path = os.path.join(content_dir, requested_file[1:])
@@ -65,7 +100,9 @@ def handle_request(connectionSocket, adr, content_dir):
                 f"Content-Length: {len(body)}\r\n"
                 "\r\n"
             )
-                
+
+            print(f"200 OK")
+
             connectionSocket.sendall(response_headers.encode())
 
             if mode == "rb":

@@ -202,7 +202,54 @@ Generated directory listing page in browser:
 <img src="report_files/subdirhtml.png" alt="Client Downloads" width="4000">
 
 
+## 7. Accessing the Server from Another Device (Network Test)
+To simulate browsing the server from another client on the network, the setup was tested using a phone as the external client.
 
-## 7. Conclusion
+Since the dorm LAN uses a private network that restricts incoming connections, the laptop acted as a Wi-Fi hotspot, allowing the phone to connect to the same local network.
 
-The HTTP server successfully serves HTML, PNG, and PDF files, generates directory listings for subfolders, and correctly handles 404 and unsupported file types. The Python client fetches files, prints HTML pages, and saves PNG/PDF files locally. All lab requirements are met, and the screenshots demonstrate that the server and client function as expected.
+## 7.1 Network Setup
+
+- Laptop: Ran the HTTP server in Docker on port 8080.
+- Phone: Connected to the laptop’s hotspot network.
+- The server’s IP address was identified using the command:
+
+```
+ipconfig
+```
+
+Result :
+```
+IPv4 Address. . . . . . . . . . . : 192.168.137.1
+```
+
+## 8.2 Accessing from Phone
+On the phone browser, the following URL was opened:
+
+Result :
+```
+http://192.168.137.1:8080
+```
+
+The phone successfully accessed the server, displaying the index page and directory listing.
+
+Screenshots:
+
+- Server running on laptop (Docker terminal)
+
+<img src="report_files/phone1.png" alt="Source Directory" width="300">
+
+- Successful access from phone browser (main directory), directory listing and images/PDFs loaded on the phone
+
+<img src="report_files/phone2.png" alt="Source Directory" width="200">
+
+<img src="report_files/phone3.jpg" alt="Source Directory" width="200">
+
+- Successful access from phone browser (index.html)
+
+<img src="report_files/phone4.jpg" alt="Source Directory" width="200">>
+
+
+## 8. Conclusion
+
+The HTTP server successfully serves HTML, PNG, and PDF files, generates directory listings for subfolders, and correctly handles 404 and unsupported file types. The Python client fetches files, prints HTML pages, and saves PNG/PDF files locally. The server was also successfully accessed from another device on the local network, confirming proper network functionality.
+All lab requirements are met, and the screenshots demonstrate that both the server and client work as expected.

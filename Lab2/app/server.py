@@ -25,7 +25,7 @@ def handle_request(connectionSocket, adr, content_dir):
 
 
     timestamps = requests_per_ip.get(client_ip, [])
-    timestamps = [t for t in timestamps if now - t < WINDOW]  # keep only last 60 seconds
+    timestamps = [t for t in timestamps if now - t < WINDOW]  # keep only last 1 seconds
     
     if len(timestamps) >= RATE_LIMIT:
         response = (
@@ -68,11 +68,11 @@ def handle_request(connectionSocket, adr, content_dir):
     
     content_type = content_types.get(ext, None)
 
-    with counter_lock:
-        current_count = requests_per_file.get(requested_file, 0)
-        ##forcing interleaving
-        time.sleep(3)
-        requests_per_file[requested_file] = current_count + 1
+    # with counter_lock:
+    current_count = requests_per_file.get(requested_file, 0)
+    ##forcing interleaving
+    # time.sleep(3)
+    requests_per_file[requested_file] = current_count + 1
 
 
     print(f"Requested file: {requested_file_path}")

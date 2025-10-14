@@ -10,7 +10,7 @@ The server:
 - Generates directory listings for **nested directories**.
 
 A Python **client** can fetch files from the server and save them locally depending on the file type.
-jj
+
 ---
 
 ## 1. Source Directory
@@ -193,13 +193,14 @@ The PDF and PNG files are saved locally in the specified directory by the client
 The server generates an HTML directory listing when a directory path is requested, allowing navigation and access to all files in a folder.
 
 Request for subdirectory:
+
 <img src="report_files/requestdir.png" alt="Client Downloads" width="600">
 
 Generated directory listing page in browser:
 
 <img src="report_files/htmlresultdir.png" alt="Client Downloads" width="500">
 
-<img src="report_files/subdirhtml.png" alt="Client Downloads" width="4000">
+<img src="report_files/subdirhtml.png" alt="Client Downloads" width="400">
 
 
 ## 7. Accessing the Server from Another Device (Network Test)

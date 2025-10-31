@@ -26,7 +26,7 @@ def start_server():
 
         parts = request.split(" ")
         if len(parts) < 2:
-            continue  # skip invalid or empty requests
+            continue  
         requested_file = parts[1]
         
         requested_file_path = os.path.join(content_dir, requested_file[1:])

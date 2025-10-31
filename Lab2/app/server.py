@@ -24,25 +24,25 @@ def handle_request(connectionSocket, adr, content_dir):
     now = time.time()
 
 
-    timestamps = requests_per_ip.get(client_ip, [])
-    timestamps = [t for t in timestamps if now - t < WINDOW]  # keep only last 1 seconds
+    # timestamps = requests_per_ip.get(client_ip, [])
+    # timestamps = [t for t in timestamps if now - t < WINDOW]  # keep only last 1 seconds
     
-    if len(timestamps) >= RATE_LIMIT:
-        response = (
-            "HTTP/1.1 429 Too Many Requests\r\n"
-            f"Content-Type: text/html\r\n"
-            "\r\n"
-            "<html><body><h1>429 Too Many Requests</h1></body></html>"
-        )
+    # if len(timestamps) >= RATE_LIMIT:
+    #     response = (
+    #         "HTTP/1.1 429 Too Many Requests\r\n"
+    #         f"Content-Type: text/html\r\n"
+    #         "\r\n"
+    #         "<html><body><h1>429 Too Many Requests</h1></body></html>"
+    #     )
 
-        print(f"429")
+    #     print(f"429")
 
-        connectionSocket.sendall(response.encode())
-        connectionSocket.close()
-        return
+    #     connectionSocket.sendall(response.encode())
+    #     connectionSocket.close()
+    #     return
 
-    timestamps.append(now)
-    requests_per_ip[client_ip] = timestamps
+    # timestamps.append(now)
+    # requests_per_ip[client_ip] = timestamps
 
     time.sleep(1)  # Simulate a delay for testing concurrency
 
@@ -70,8 +70,8 @@ def handle_request(connectionSocket, adr, content_dir):
 
     # with counter_lock:
     current_count = requests_per_file.get(requested_file, 0)
-    ##forcing interleaving
-    # time.sleep(3)
+        ##forcing interleaving
+    time.sleep(3)
     requests_per_file[requested_file] = current_count + 1
 
 

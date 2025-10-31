@@ -3,8 +3,8 @@ import sys, os
 
 serverName = sys.argv[1]      # server_host
 serverPort = int(sys.argv[2]) # server_port
-url_path = sys.argv[3]        # e.g., /image1.png
-save_dir = sys.argv[4]        # e.g., ./downloads
+url_path = sys.argv[3]        
+save_dir = sys.argv[4]        
 
 
 def run_client():

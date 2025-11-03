@@ -19,7 +19,7 @@ async function simulationMain(): Promise<void> {
     const size = 5;
     const players = 1;
     const tries = 10;
-    const maxDelayMilliseconds = 100;
+    const maxDelayMilliseconds = 1000;
 
     // start up one or more players as concurrent asynchronous function calls
     const playerPromises: Array<Promise<void>> = [];
@@ -39,9 +39,31 @@ async function simulationMain(): Promise<void> {
                 // TODO try to flip over a first card at (randomInt(size), randomInt(size))
                 //      which might wait until this player can control that card
 
-                await timeout(Math.random() * maxDelayMilliseconds);
+                const r1 = randomInt(board.getRows());
+                const c1 = randomInt(board.getCols());
+                console.log(`Player ${playerNumber} flips first card at (${r1}, ${c1})`);
+                
+                try {
+                    await board.flipCard(r1, c1, playerNumber);
+                    console.log(`✅ Player ${playerNumber} successfully flipped first card`);
+                } catch (err) {
+                    console.log(`❌ Player ${playerNumber} failed first flip: ${err}`);
+                    continue; // skip second flip if failed
+                }
+
                 // TODO and if that succeeded,
                 //      try to flip over a second card at (randomInt(size), randomInt(size))
+                const r2 = randomInt(board.getRows());
+                const c2 = randomInt(board.getCols());
+                console.log(`Player ${playerNumber} tries second flip at (${r2}, ${c2})`);
+
+                try {
+                    await board.flipCard(r2, c2, playerNumber);
+                    console.log(`SUCCESS! Player ${playerNumber} successfully flipped second card`);
+                } catch (err) {
+                    console.log(`FAIL! Player ${playerNumber} failed second flip: ${err}`);
+                }
+
             } catch (err) {
                 console.error('attempt to flip a card failed:', err);
             }

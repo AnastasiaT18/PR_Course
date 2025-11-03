@@ -25,6 +25,26 @@ describe('Board', function() {
  */
 describe('async test cases', function() {
 
+    it('should parse a valid board file correctly', async function() {
+        const board = await Board.parseFromFile('boards/ab.txt');
+
+        // Basic dimension check
+        assert.strictEqual(board.getRows(), 5);
+        assert.strictEqual(board.getCols(), 5);
+
+        // Board string check
+        const boardStr = board.toString();
+        console.log('Parsed board:\n', boardStr);
+        assert.ok(boardStr.includes('down'), 'All cards should be initially down');
+    });
+
+    it('should reject a board file with invalid dimensions', async function() {
+        await assert.rejects(
+            Board.parseFromFile('boards/invalid.txt'),
+            /Invalid board file format/
+        );
+    });
+
     it('reads a file asynchronously', async function() {
         const fileContents = (await fs.promises.readFile('boards/ab.txt')).toString();
         assert(fileContents.startsWith('5x5'));

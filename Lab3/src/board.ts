@@ -4,6 +4,7 @@
 
 import assert from 'node:assert';
 import fs from 'node:fs';
+import { clearScreenDown } from 'node:readline';
 
 class Card {
     public value: string;
@@ -57,6 +58,27 @@ class Card {
 
 }
 
+class Player {
+  readonly id: string;
+  private selected: [number, number][] = [];
+
+  constructor(id: string) {
+    this.id = id;
+  }
+
+  getSelected(): [number, number][] {
+    return this.selected; // defensive copy
+  }
+
+  setSelected(positions: [number, number][]): void {
+    this.selected = [...positions];
+  }
+
+  clearSelected(): void {
+    this.selected = [];
+  }
+
+}
 
 /**
  * TODO specification
@@ -68,6 +90,8 @@ export class Board {
     private rows: number;
     private cols: number;
     private grid: Card[][];  
+
+    private players: Map<string, Player> = new Map();
     
     public getRows(): number {
         return this.rows;
@@ -76,6 +100,9 @@ export class Board {
       public getCols(): number {
         return this.cols;
       }
+
+    public getPlayers(): Map<string, Player> {
+        return this.players;}
       
 
     // Abstraction function:
@@ -174,19 +201,178 @@ export class Board {
         return new Board(rows, cols, grid); // TODO: implement this
     }
 
-    async flipCard(row: number, col: number, playerId: number): Promise<void>  {
-        const rowArray = this.grid[row];
-        if (!rowArray || !rowArray[col]) {
-            throw new Error("Card position out of bounds");
-        }
-        if (rowArray[col].state !== "down") {
-            throw new Error("Card is already flipped."); // rejected promise
-        }
-        rowArray[col].flipUp();
+    async flipCard(row: number, col: number, playerId: string): Promise<void>  {
+      
+      let player = this.players.get(playerId);
+
+
+      if (player && player.getSelected().length === 2) {
+        this.resolvePreviousTurn(playerId);
+      }
+      if (!player) {
+        player = new Player(playerId);
+        this.players.set(playerId, player);
+      }
+
+      const selected = player.getSelected();
+      console.log("Before flipping, selected =", selected);
+
+
+      if (selected.length == 0) {
+        this.flipFirst(player, row, col);
+        console.log("After flipping first:", player.getSelected());
+
+
+      } else if (selected.length == 1) {
+        this.flipSecond(player, row, col);
+        console.log("After flipping second:", player.getSelected());
+
+      } else {
+        console.log(`[WARN] ${playerId} already selected two cards`);      }
+
     }
 
+
+  private flipFirst(player: Player, row: number, col: number): void {
+      const card  = this.grid[row]?.[col];
+
+      if (!card){
+        throw new Error("1-A: No card there (empty space)");
+      }
+
+      switch(card.state){
+        case "none":
+          throw new Error("1-A: No card there (removed)");
+
+        case "down":
+          console.log("Card at ",row, col, "is face down, flipping up");
+          card.flipUp();
+          card.control(player.id); // 1-B
+          player.setSelected([[row, col]]);
+          console.log(player.getSelected());
+          console.log(`[FIRST CARD] ${player.id} flipped ${card.value}`);
+          break;
+
+        case "up":
+          if (card.controller === null) {
+            // 1-C
+            card.control(player.id);
+            player.setSelected([[row, col]]);
+        } else{
+          throw new Error("1-D: Card controlled by another player (would wait)");
+        }
+          break;
+
+        case "controlled":
+          if (card.controller === player.id) {
+            // player already controls this card
+            break;
+        } else {
+            throw new Error("1-D: Card controlled by another player (would wait)");
+        }
+      }
+      console.log(player.getSelected());
+    }
+
+    private flipSecond(player: Player, row: number, col: number): void {
+      const card = this.grid[row]?.[col];
+      if (!card) throw new Error("2-A: No card there");
+
+      const selected = player.getSelected();
+      const firstPos = selected[0];         // firstPos is [number, number] | undefined
+      if (!firstPos) throw new Error("No first card recorded");
+    
+      const [fr, fc] = firstPos;            // destructure row & col of the first card
+      const firstCard = this.grid[fr]?.[fc];
+      if (!firstCard) throw new Error("First card not found on board");
+      
+      switch(card.state){
+        case "none":
+          firstCard.state = "up";
+          firstCard.controller = null;
+          player.clearSelected();
+          throw new Error("2-A: No card there");
+      
+        case "controlled":
+            //operation fails 2B
+            firstCard.controller = null;
+            firstCard.state = "up";
+            player.clearSelected();
+            throw new Error("2-B: Card controlled by someone else");
+
+        case "down":
+          card.flipUp();
+          break;
+        }
+
+        console.log("checking now...");
+        if(firstCard.value === card.value){
+          card.control(player.id);
+          player.setSelected([firstPos, [row, col]]);
+          console.log(`[MATCH] ${player.id} found a pair: ${card.value}`);
+      }else{
+        player.setSelected([firstPos, [row, col]]);
+        firstCard.controller = null;
+        firstCard.state = "up";
+        card.controller = null;
+        card.state = "up";
+        // player.clearSelected();
+      }
+        }
+
+        private resolvePreviousTurn(playerId: string): void {
+          const player = this.players.get(playerId);
+          if (!player) return;
+
+          const prev = player.getSelected();
+          if (!prev || prev.length === 0) return;
+      
+          if (prev.length === 2) {
+              const [pos1, pos2] = prev;
+
+              if (!pos1 || !pos2) {
+                throw new Error("Invalid stored positions for previous turn");
+              }
+
+              const card1 = this.grid[pos1[0]]![pos1[1]]!;
+              const card2 = this.grid[pos2[0]]![pos2[1]]!;
+
+              if (!card1 || !card2) throw new Error("Invalid stored card positions");
+
+      
+              if (card1.value === card2.value && card1.controller === playerId && card2.controller === playerId) {
+                  // 3-A: remove both
+                  card1.remove();
+                  card2.remove();
+              } else {
+                  // 3-B: flip back if not controlled by anyone
+                  if (card1.state === "up" && card1.controller === null) card1.reset();
+                 
+                  if (card2.state === "up" && card2.controller === null) card2.reset();
+                  player.clearSelected();
+
+              }
+          }
+          player.clearSelected();
+        }
+      
+    
+
     public toString(): string {
-        return this.grid.map(row => row.map(card => card.toString()).join(" ")).join("\n");
-}
+        return `${this.rows}x${this.cols}\n` +
+          this.grid.map(row =>
+            row.map(card => {
+              switch(card.state) {
+                case "none": return "none -";
+                case "down": return "down -";
+                case "up": return `up ${card.value}`;
+                case "controlled": return `my ${card.value}`;
+              }
+            }).join('\n') // join cards in a row
+          ).join('\n'); // join rows
+      }
+
+      
+
 
 }

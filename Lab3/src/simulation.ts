@@ -44,7 +44,7 @@ async function simulationMain(): Promise<void> {
                 console.log(`Player ${playerNumber} flips first card at (${r1}, ${c1})`);
                 
                 try {
-                    await board.flipCard(r1, c1, playerNumber);
+                    await board.flipCard(r1, c1, playerNumber.toString());
                     console.log(`✅ Player ${playerNumber} successfully flipped first card`);
                 } catch (err) {
                     console.log(`❌ Player ${playerNumber} failed first flip: ${err}`);
@@ -58,7 +58,7 @@ async function simulationMain(): Promise<void> {
                 console.log(`Player ${playerNumber} tries second flip at (${r2}, ${c2})`);
 
                 try {
-                    await board.flipCard(r2, c2, playerNumber);
+                    await board.flipCard(r2, c2, playerNumber.toString());
                     console.log(`SUCCESS! Player ${playerNumber} successfully flipped second card`);
                 } catch (err) {
                     console.log(`FAIL! Player ${playerNumber} failed second flip: ${err}`);

@@ -14,12 +14,12 @@ import { Board } from './board.js';
  * @throws Error if an error occurs reading or parsing the board
  */
 async function simulationMain(): Promise<void> {
-    const filename = 'boards/ab.txt';
+    const filename = 'boards/simple.txt';
     const board: Board = await Board.parseFromFile(filename);
     const size = 5;
-    const players = 1;
-    const tries = 10;
-    const maxDelayMilliseconds = 1000;
+    const players = 2;
+    const tries = 3;
+    const maxDelayMilliseconds = 100;
 
     // start up one or more players as concurrent asynchronous function calls
     const playerPromises: Array<Promise<void>> = [];
@@ -41,7 +41,7 @@ async function simulationMain(): Promise<void> {
 
                 const r1 = randomInt(board.getRows());
                 const c1 = randomInt(board.getCols());
-                console.log(`Player ${playerNumber} flips first card at (${r1}, ${c1})`);
+                console.log(`Player ${playerNumber} tries to flip first card at (${r1}, ${c1})`);
                 
                 try {
                     await board.flipCard(r1, c1, playerNumber.toString());

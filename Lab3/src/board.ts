@@ -71,13 +71,26 @@ class Player {
   }
 
   setSelected(positions: [number, number][]): void {
-    this.selected = [...positions];
+    this.selected = [...this.selected, ...positions];
   }
 
   clearSelected(): void {
     this.selected = [];
   }
 
+}
+
+class Deffered<T>{
+    promise: Promise<T>;
+    resolve!: (value: T | PromiseLike<T>) => void;
+    reject!: (reason?: any) => void;
+
+    constructor() {
+        this.promise = new Promise<T>((res, rej) => {
+            this.resolve = res;
+            this.reject = rej;
+        });
+    }
 }
 
 /**
@@ -92,6 +105,7 @@ export class Board {
     private grid: Card[][];  
 
     private players: Map<string, Player> = new Map();
+    private cardLocks: Map<string, Deffered<void>[]> = new Map();
     
     public getRows(): number {
         return this.rows;
@@ -206,9 +220,11 @@ export class Board {
       let player = this.players.get(playerId);
 
 
-      if (player && player.getSelected().length === 2) {
-        this.resolvePreviousTurn(playerId);
+      if (player && player.getSelected().length > 0) {
+        await this.resolvePreviousTurn(playerId);
       }
+
+
       if (!player) {
         player = new Player(playerId);
         this.players.set(playerId, player);
@@ -219,7 +235,7 @@ export class Board {
 
 
       if (selected.length == 0) {
-        this.flipFirst(player, row, col);
+        await this.flipFirst(player, row, col);
         console.log("After flipping first:", player.getSelected());
 
 
@@ -233,8 +249,9 @@ export class Board {
     }
 
 
-  private flipFirst(player: Player, row: number, col: number): void {
-      const card  = this.grid[row]?.[col];
+  private async flipFirst(player: Player, row: number, col: number): Promise<void> {
+    // while (true){
+    const card  = this.grid[row]?.[col];
 
       if (!card){
         throw new Error("1-A: No card there (empty space)");
@@ -245,12 +262,12 @@ export class Board {
           throw new Error("1-A: No card there (removed)");
 
         case "down":
-          console.log("Card at ",row, col, "is face down, flipping up");
           card.flipUp();
           card.control(player.id); // 1-B
           player.setSelected([[row, col]]);
           console.log(player.getSelected());
-          console.log(`[FIRST CARD] ${player.id} flipped ${card.value}`);
+          console.log(`Card ${card.value} at (${row}, ${col}) was DOWN, now UP.`);
+          console.log(`[FIRST CARD] ${player.id} flipped ${card.value}, at (${row}, ${col})`);
           break;
 
         case "up":
@@ -258,20 +275,36 @@ export class Board {
             // 1-C
             card.control(player.id);
             player.setSelected([[row, col]]);
-        } else{
-          throw new Error("1-D: Card controlled by another player (would wait)");
-        }
+            console.log(`Card ${card.value} at (${row}, ${col}) was UP and UNCONTROLLED.`);
+            console.log(`[FIRST CARD] ${player.id} controls ${card.value}, at (${row}, ${col})`);
+            break;
+
+        } //else{
+        //   throw new Error("1-D: Card controlled by another player (would wait)");
+        // }
           break;
 
         case "controlled":
           if (card.controller === player.id) {
             // player already controls this card
-            break;
+            console.log("You already control this card, choose your second.");
+            throw new Error("You already control this card, choose your second."); 
         } else {
-            throw new Error("1-D: Card controlled by another player (would wait)");
-        }
+            console.log("1-D: Card controlled by another player (would wait)");
+            console.log(`[WAIT] ${player.id} waiting for card (${row}, ${col})`);
+            // await this.waitForCard(row, col);
+
+            const deferred = new Deffered<void>();
+            const key = `${row},${col}`;
+            if (!this.cardLocks.has(key)) this.cardLocks.set(key, []);
+            this.cardLocks.get(key)!.push(deferred);
+
+            await deferred.promise;
+            console.log("Card is now free.");
+            return this.flipFirst(player, row, col);
+        }break;
+      //}
       }
-      console.log(player.getSelected());
     }
 
     private flipSecond(player: Player, row: number, col: number): void {
@@ -290,37 +323,51 @@ export class Board {
         case "none":
           firstCard.state = "up";
           firstCard.controller = null;
-          player.clearSelected();
-          throw new Error("2-A: No card there");
+          // player.clearSelected();
+          player.setSelected([firstPos, [row, col]]);
+          throw new Error("2-A: No card there. Failed second card.Start again. First card remains up, uncontrolled.");
       
         case "controlled":
             //operation fails 2B
             firstCard.controller = null;
             firstCard.state = "up";
-            player.clearSelected();
-            throw new Error("2-B: Card controlled by someone else");
+            // player.clearSelected();
+            throw new Error("2-B: Card controlled by someone else. Failed second card.Start again. First card remains up, uncontrolled.");
 
+        case "up":
+            if (card.controller === null) {
+              // 2--
+              card.control(player.id);
+              player.setSelected([[row, col]]);
+              console.log(`[SECOND CARD] ${player.id} controls ${card.value}, at (${row}, ${col})`);}
+              break;
         case "down":
           card.flipUp();
+          card.control(player.id); // 2D
+          player.setSelected([[row, col]]);
+          console.log(player.getSelected());
+          console.log(`[SECOND CARD] ${player.id} flipped ${card.value}, at (${row}, ${col})`);
           break;
         }
 
         console.log("checking now...");
         if(firstCard.value === card.value){
-          card.control(player.id);
-          player.setSelected([firstPos, [row, col]]);
+          // card.control(player.id);
+          // player.setSelected([firstPos, [row, col]]);
           console.log(`[MATCH] ${player.id} found a pair: ${card.value}`);
       }else{
-        player.setSelected([firstPos, [row, col]]);
+        // player.setSelected([firstPos, [row, col]]);
         firstCard.controller = null;
         firstCard.state = "up";
         card.controller = null;
         card.state = "up";
         // player.clearSelected();
+        console.log(`[NO MATCH] `);
+
       }
         }
 
-        private resolvePreviousTurn(playerId: string): void {
+    private async resolvePreviousTurn(playerId: string): Promise<void> {
           const player = this.players.get(playerId);
           if (!player) return;
 
@@ -341,21 +388,68 @@ export class Board {
 
       
               if (card1.value === card2.value && card1.controller === playerId && card2.controller === playerId) {
+                console.log("Player", player.id, "found match, cards are now being removed...");
+                console.log("Board state now:");
+                this.toString();
                   // 3-A: remove both
-                  card1.remove();
-                  card2.remove();
+                card1.remove();
+                console.log("Card 1 removed.");
+                card2.remove();
+                console.log("Card 2 removed.");
               } else {
                   // 3-B: flip back if not controlled by anyone
-                  if (card1.state === "up" && card1.controller === null) card1.reset();
-                 
-                  if (card2.state === "up" && card2.controller === null) card2.reset();
+                  console.log("Player", player.id, "didn't find match. Cards are up, not controlled, they are being FLIPPED DOWN. ")
+                  card1.reset();
+                  card2.reset();
                   player.clearSelected();
 
               }
+              this.resolveWaiters(pos1[0], pos1[1]);
+              this.resolveWaiters(pos2[0], pos2[1]);
+              player.clearSelected();
+
           }
-          player.clearSelected();
+          else{
+            const [pos1] = prev;
+
+            if (!pos1) {
+              throw new Error("Invalid stored positions for previous turn");
+            }
+
+            const card1 = this.grid[pos1[0]]![pos1[1]]!;
+
+            if (!card1) throw new Error("Invalid stored card positions");
+            console.log(card1.state);
+            if (card1.controller !== player.id){
+              card1.reset();
+              player.clearSelected();
+              console.log("Clearing selected...");
+            }
+
+          }
+          console.log("ARRAY IS: ", player.getSelected());
         }
       
+    private async waitForCard(row: number, col: number): Promise<void> {
+      const key = `${row},${col}`;
+      const deferred = new Deffered<void>();
+      if (!this.cardLocks.has(key)) {
+        this.cardLocks.set(key, []);
+        }
+      this.cardLocks.get(key)!.push(deferred);
+      console.log("Card at (", row, ",", col, ") is now locked. Waiters:", this.cardLocks.get(key)!.length);
+      await deferred.promise;
+    }
+
+    private resolveWaiters(row: number, col: number): void {
+      const key = `${row},${col}`;
+      const waiters = this.cardLocks.get(key);
+      console.log("Resolving waiters for card at (", row, ",", col, "). Waiters:", waiters ? waiters.length : 0);
+      if (waiters) {
+        for (const w of waiters) w.resolve();
+        this.cardLocks.delete(key);
+      }
+    }
     
 
     public toString(): string {

@@ -33,7 +33,7 @@ describe('async test cases', function() {
         assert.strictEqual(board.getCols(), 5);
 
         // Board string check
-        const boardStr = board.toString();
+        const boardStr = board.toString("testPlayer");
         console.log('Parsed board:\n', boardStr);
         assert.ok(boardStr.includes('down'), 'All cards should be initially down');
     });
@@ -67,7 +67,7 @@ describe('async test cases', function() {
         await board.map(f);
 
          // Convert to string
-         const boardStr = board.toString();
+         const boardStr = board.toString("testPlayer");
          console.log('Board after map():\n', boardStr);
 
         assert.ok(!boardStr.includes('🦄'), 'Unicorns should be replaced');

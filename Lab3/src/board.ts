@@ -270,6 +270,7 @@ export class Board {
 
         case "down":
           card.flipUp();
+          this.notifyChange();
           card.control(player.id); // 1-B
           player.setSelected([[row, col]]);
           console.log(player.getSelected());
@@ -331,7 +332,7 @@ export class Board {
           firstCard.state = "up";
           firstCard.controller = null;
           // player.clearSelected();
-          player.setSelected([firstPos, [row, col]]);
+          // player.setSelected([firstPos, [row, col]]);
           throw new Error("2-A: No card there. Failed second card.Start again. First card remains up, uncontrolled.");
       
         case "controlled":
@@ -350,6 +351,7 @@ export class Board {
               break;
         case "down":
           card.flipUp();
+          this.notifyChange();
           card.control(player.id); // 2D
           player.setSelected([[row, col]]);
           console.log(player.getSelected());
@@ -397,17 +399,22 @@ export class Board {
               if (card1.value === card2.value && card1.controller === playerId && card2.controller === playerId) {
                 console.log("Player", player.id, "found match, cards are now being removed...");
                 console.log("Board state now:");
-                this.toString();
+                this.toString(player.id);
                   // 3-A: remove both
                 card1.remove();
                 console.log("Card 1 removed.");
+                console.log("Card 1 is", card1.state);
                 card2.remove();
                 console.log("Card 2 removed.");
+                console.log("Card 2 is", card2.state);
+
+                this.notifyChange();
               } else {
-                  // 3-B: flip back if not controlled by anyone
-                  console.log("Player", player.id, "didn't find match. Cards are up, not controlled, they are being FLIPPED DOWN. ")
-                  card1.reset();
-                  card2.reset();
+                  // 3-B: flip back IF not controlled by anyone
+                  console.log("Player", player.id, "didn't find match. Cards are up, they are being FLIPPED DOWN IF NOT CONTROLLED ")
+                  if (card1.state !== "controlled") card1.reset();
+                  if (card2.state !== "controlled") card2.reset();
+                  this.notifyChange();
                   player.clearSelected();
 
               }
@@ -429,6 +436,7 @@ export class Board {
             console.log(card1.state);
             if (card1.controller !== player.id){
               card1.reset();
+              this.notifyChange();
               player.clearSelected();
               console.log("Clearing selected...");
             }
@@ -459,15 +467,15 @@ export class Board {
     }
     
 
-    public toString(): string {
+    public toString(playerId: string): string {
       return `${this.rows}x${this.cols}\n` +
         this.grid.map(row =>
           row.map(card => {
             switch(card.state) {
               case "none": return "none -";
-                case "down": return "down -";
+              case "down": return "down -";
               case "up": return `up ${card.value}`;
-              case "controlled": return `my ${card.value}`;
+              case "controlled": return card.controller === playerId ? `my ${card.value}` : `up ${card.value}`;
             }
           }).join('\n')
         ).join('\n');
@@ -510,6 +518,27 @@ export class Board {
       await Promise.all(transformPromises);
     }
       
+    public async waitForChange(playerId: string): Promise<void> {
+     const watcher = new Deffered<void>();
+
+      if (!this.cardLocks.has("watchers")) {
+        this.cardLocks.set("watchers", []);
+      }
+      this.cardLocks.get("watchers")!.push(watcher);
+
+      await watcher.promise;
+
+    }
+
+    private notifyChange(): void{
+      let watchers = this.cardLocks.get("watchers");
+
+      if (watchers){
+        for (const w of watchers) w.resolve();
+        this.cardLocks.delete("watchers");
+      }
+
+    }
 
 
 }

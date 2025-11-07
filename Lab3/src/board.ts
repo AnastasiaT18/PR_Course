@@ -118,6 +118,13 @@ export class Board {
     public getPlayers(): Map<string, Player> {
         return this.players;}
       
+    public getCard(row: number, col: number) {
+        if (this.grid[row] && this.grid[row][col]) {
+            return this.grid[row][col];
+        }
+        throw new Error("Card at the specified position does not exist");
+      }
+      
 
     // Abstraction function:
     //   TODO
@@ -430,16 +437,16 @@ export class Board {
           console.log("ARRAY IS: ", player.getSelected());
         }
       
-    private async waitForCard(row: number, col: number): Promise<void> {
-      const key = `${row},${col}`;
-      const deferred = new Deffered<void>();
-      if (!this.cardLocks.has(key)) {
-        this.cardLocks.set(key, []);
-        }
-      this.cardLocks.get(key)!.push(deferred);
-      console.log("Card at (", row, ",", col, ") is now locked. Waiters:", this.cardLocks.get(key)!.length);
-      await deferred.promise;
-    }
+    // private async waitForCard(row: number, col: number): Promise<void> {
+    //   const key = `${row},${col}`;
+    //   const deferred = new Deffered<void>();
+    //   if (!this.cardLocks.has(key)) {
+    //     this.cardLocks.set(key, []);
+    //     }
+    //   this.cardLocks.get(key)!.push(deferred);
+    //   console.log("Card at (", row, ",", col, ") is now locked. Waiters:", this.cardLocks.get(key)!.length);
+    //   await deferred.promise;
+    // }
 
     private resolveWaiters(row: number, col: number): void {
       const key = `${row},${col}`;
@@ -453,19 +460,55 @@ export class Board {
     
 
     public toString(): string {
-        return `${this.rows}x${this.cols}\n` +
-          this.grid.map(row =>
-            row.map(card => {
-              switch(card.state) {
-                case "none": return "none -";
+      return `${this.rows}x${this.cols}\n` +
+        this.grid.map(row =>
+          row.map(card => {
+            switch(card.state) {
+              case "none": return "none -";
                 case "down": return "down -";
-                case "up": return `up ${card.value}`;
-                case "controlled": return `my ${card.value}`;
-              }
-            }).join('\n') // join cards in a row
-          ).join('\n'); // join rows
-      }
+              case "up": return `up ${card.value}`;
+              case "controlled": return `my ${card.value}`;
+            }
+          }).join('\n')
+        ).join('\n');
+    }
+    
 
+    public async map(f: (card: string) => Promise<string>): Promise<void> {
+      
+      let valueMap = new Map<string, Promise<string>>();
+
+      const transformPromises: Promise<void>[] = [];
+
+
+      for(let r = 0; r < this.rows; r++) {
+        for(let c = 0; c < this.cols; c++) {
+
+          const card = this.grid[r]?.[c];
+          if (!card) continue;
+
+            if (!valueMap.has(card.value)) {
+              valueMap.set(card.value, f(card.value));
+            }
+
+            const p = (async () => {
+              const newValue = await valueMap.get(card.value)!;
+              if (typeof newValue !== "string") {
+                throw new Error(`Invalid mapped value for ${card.value}: ${newValue}`);
+              }
+              
+              console.log(`Mapping ${card.value} -> ${newValue}`);
+
+              card.value = newValue;
+            })();
+            
+            transformPromises.push(p);
+
+          }
+        }
+
+      await Promise.all(transformPromises);
+    }
       
 
 

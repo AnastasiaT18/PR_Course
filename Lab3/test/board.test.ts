@@ -49,4 +49,37 @@ describe('async test cases', function() {
         const fileContents = (await fs.promises.readFile('boards/ab.txt')).toString();
         assert(fileContents.startsWith('5x5'));
     });
+
+    it('should apply async map() correctly and preserve card states', async function() {
+        const board = await Board.parseFromFile('boards/perfect.txt');
+
+        const originalState = board.getCard(0, 0).state;
+
+        // Define an async transformer function (simulating async delay)
+        const f = async (value: string) => {
+            // small delay to simulate async operation
+            await new Promise(res => setTimeout(res, 10));
+            if (value === '🦄') return 'lollipop';
+            if (value === '🌈') return 'sunshine';
+            return value; // unchanged otherwise
+        };
+
+        await board.map(f);
+
+         // Convert to string
+         const boardStr = board.toString();
+         console.log('Board after map():\n', boardStr);
+
+        assert.ok(!boardStr.includes('🦄'), 'Unicorns should be replaced');
+        assert.ok(!boardStr.includes('🌈'), 'Rainbows should be replaced');
+        assert.ok(boardStr.includes('lollipop'), 'Lollipops should appear');
+        assert.ok(boardStr.includes('sunshine'), 'Sunshine should appear');
+
+        const sameCardAfter = board.getCard(0, 0);
+        assert.strictEqual(
+            sameCardAfter.state,
+            originalState,
+            'Card state should remain unchanged after map()'
+        );
+    });
 });

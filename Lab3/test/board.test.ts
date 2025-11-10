@@ -11,11 +11,8 @@ import { Board } from '../src/board.js';
  * Tests for the Board abstract data type.
  */
 describe('Board', function() {
-    
     // Testing strategy
     //   TODO
-
-
 });
 
 
@@ -52,34 +49,37 @@ describe('async test cases', function() {
 
     it('should apply async map() correctly and preserve card states', async function() {
         const board = await Board.parseFromFile('boards/perfect.txt');
-
-        const originalState = board.getCard(0, 0).state;
-
-        // Define an async transformer function (simulating async delay)
+    
+        // Async transformer function
         const f = async (value: string) => {
-            // small delay to simulate async operation
             await new Promise(res => setTimeout(res, 10));
             if (value === '🦄') return 'lollipop';
             if (value === '🌈') return 'sunshine';
-            return value; // unchanged otherwise
+            return value;
         };
-
+    
+        // Apply map
         await board.map(f);
-
-         // Convert to string
-         const boardStr = board.toString("testPlayer");
-         console.log('Board after map():\n', boardStr);
-
-        assert.ok(!boardStr.includes('🦄'), 'Unicorns should be replaced');
-        assert.ok(!boardStr.includes('🌈'), 'Rainbows should be replaced');
-        assert.ok(boardStr.includes('lollipop'), 'Lollipops should appear');
-        assert.ok(boardStr.includes('sunshine'), 'Sunshine should appear');
-
-        const sameCardAfter = board.getCard(0, 0);
-        assert.strictEqual(
-            sameCardAfter.state,
-            originalState,
-            'Card state should remain unchanged after map()'
-        );
+    
+        // Check values directly
+        let values: string[] = [];
+        for (let r = 0; r < board.getRows(); r++) {
+            for (let c = 0; c < board.getCols(); c++) {
+                values.push(board.getCard(r, c).getValue());
+            }
+        }
+    
+        // Assertions
+        assert.ok(values.includes('lollipop'), 'Lollipops should appear');
+        assert.ok(values.includes('sunshine'), 'Sunshine should appear');
+        assert.ok(!values.includes('🦄'), 'Unicorns should be replaced');
+        assert.ok(!values.includes('🌈'), 'Rainbows should be replaced');
+    
+        // Check states remain unchanged (all should still be 'down')
+        for (let r = 0; r < board.getRows(); r++) {
+            for (let c = 0; c < board.getCols(); c++) {
+                assert.strictEqual(board.getCard(r, c).getState(), 'down', 'Card state should remain unchanged');
+            }
+        }
     });
 });

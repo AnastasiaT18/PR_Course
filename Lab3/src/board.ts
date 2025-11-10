@@ -7,14 +7,48 @@ import fs from 'node:fs';
 import { clearScreenDown } from 'node:readline';
 
 class Card {
-    public value: string;
-    public state: "none" | "down" | "up" | "controlled";
-    public controller: string | null;
+    private value: string;
+    private state: "none" | "down" | "up" | "controlled";
+    private controller: string | null;
+    private flipped_by: string | null;
 
     constructor(value: string) {
         this.value = value;
         this.state = "down";
         this.controller = null;
+        this.flipped_by = null;
+    }
+
+    public getValue(): string {
+        return this.value;
+    }
+
+    public setValue(newValue: string) {
+        this.value = newValue;
+    }
+
+    public getState(): string {
+      return this.state;
+  }
+
+  public setState(state: "none" | "down" | "up" | "controlled"): void { 
+      this.state = state;
+  }
+
+    public getController(): string | null {
+      return this.controller;
+    }
+
+    public setController(playerId: string | null): void { 
+      this.controller = playerId;
+  }
+
+  public setFlippedBy(playerId: string | null): void { 
+    this.flipped_by = playerId;
+}
+
+    public getFlippedBy(): string | null {
+      return this.flipped_by;
     }
 
     flipUp(): void{
@@ -28,17 +62,20 @@ class Card {
         if (this.state !== "up") throw new Error("Card must be face up first");
         this.state = "controlled";
         this.controller = playerId;
+        this.flipped_by = playerId;
       }
 
     reset(): void {
       this.state = "down";
       this.controller = null;
+      this.flipped_by = null;
     }
 
     remove(): void {
         this.state = "none";
         this.value = "";
         this.controller = null;
+        this.flipped_by = null;
         }
 
     toString(): string {
@@ -98,7 +135,7 @@ class Deffered<T>{
  * Mutable and concurrency safe.
  */
 export class Board {
-
+    
     // TODO fields
     private rows: number;
     private cols: number;
@@ -107,6 +144,10 @@ export class Board {
     private players: Map<string, Player> = new Map();
     private cardLocks: Map<string, Deffered<void>[]> = new Map();
     
+    public getGrid(): Card[][] | undefined {
+      return this.grid;
+    }
+
     public getRows(): number {
         return this.rows;
       }
@@ -116,7 +157,7 @@ export class Board {
       }
 
     public getPlayers(): Map<string, Player> {
-        return this.players;}
+      return new Map(this.players);}
       
     public getCard(row: number, col: number) {
         if (this.grid[row] && this.grid[row][col]) {
@@ -168,9 +209,9 @@ export class Board {
             if (row.length !== this.cols)
               throw new Error("Grid column mismatch");
             for (const card of row) {
-              if (card.state === "controlled" && card.controller === null)
+              if (card.getState() === "controlled" && card.getController() === null)
                 throw new Error("Controlled card missing controller");
-              if (card.state !== "controlled" && card.controller !== null)
+              if (card.getState() !== "controlled" && card.getController() !== null)
                 throw new Error("Uncontrolled card has controller");
             }
           }
@@ -264,7 +305,7 @@ export class Board {
         throw new Error("1-A: No card there (empty space)");
       }
 
-      switch(card.state){
+      switch(card.getState()){
         case "none":
           throw new Error("1-A: No card there (removed)");
 
@@ -274,17 +315,17 @@ export class Board {
           card.control(player.id); // 1-B
           player.setSelected([[row, col]]);
           console.log(player.getSelected());
-          console.log(`Card ${card.value} at (${row}, ${col}) was DOWN, now UP.`);
-          console.log(`[FIRST CARD] ${player.id} flipped ${card.value}, at (${row}, ${col})`);
+          console.log(`Card ${card.getValue()} at (${row}, ${col}) was DOWN, now UP.`);
+          console.log(`[FIRST CARD] ${player.id} flipped ${card.getValue()}, at (${row}, ${col})`);
           break;
 
         case "up":
-          if (card.controller === null) {
+          if (card.getController() === null) {
             // 1-C
             card.control(player.id);
             player.setSelected([[row, col]]);
-            console.log(`Card ${card.value} at (${row}, ${col}) was UP and UNCONTROLLED.`);
-            console.log(`[FIRST CARD] ${player.id} controls ${card.value}, at (${row}, ${col})`);
+            console.log(`Card ${card.getValue()} at (${row}, ${col}) was UP and UNCONTROLLED.`);
+            console.log(`[FIRST CARD] ${player.id} controls ${card.getValue()}, at (${row}, ${col})`);
             break;
 
         } //else{
@@ -293,14 +334,13 @@ export class Board {
           break;
 
         case "controlled":
-          if (card.controller === player.id) {
+          if (card.getController() === player.id) {
             // player already controls this card
             console.log("You already control this card, choose your second.");
             throw new Error("You already control this card, choose your second."); 
         } else {
             console.log("1-D: Card controlled by another player (would wait)");
             console.log(`[WAIT] ${player.id} waiting for card (${row}, ${col})`);
-            // await this.waitForCard(row, col);
 
             const deferred = new Deffered<void>();
             const key = `${row},${col}`;
@@ -308,6 +348,7 @@ export class Board {
             this.cardLocks.get(key)!.push(deferred);
 
             await deferred.promise;
+
             console.log("Card is now free.");
             return this.flipFirst(player, row, col);
         }break;
@@ -320,57 +361,58 @@ export class Board {
       if (!card) throw new Error("2-A: No card there");
 
       const selected = player.getSelected();
-      const firstPos = selected[0];         // firstPos is [number, number] | undefined
+      const firstPos = selected[0];         // get position of the first card
       if (!firstPos) throw new Error("No first card recorded");
     
-      const [fr, fc] = firstPos;            // destructure row & col of the first card
+      const [fr, fc] = firstPos;           // first row and first col
       const firstCard = this.grid[fr]?.[fc];
       if (!firstCard) throw new Error("First card not found on board");
       
-      switch(card.state){
+      switch(card.getState()){
         case "none":
-          firstCard.state = "up";
-          firstCard.controller = null;
+          firstCard.setState("up");
+          firstCard.setController(null);
+          firstCard.setFlippedBy(null);
           // player.clearSelected();
           // player.setSelected([firstPos, [row, col]]);
           throw new Error("2-A: No card there. Failed second card.Start again. First card remains up, uncontrolled.");
       
         case "controlled":
             //operation fails 2B
-            firstCard.controller = null;
-            firstCard.state = "up";
+            firstCard.setController(null);
+            firstCard.setState("up");
+            firstCard.setFlippedBy(null);
+
             // player.clearSelected();
             throw new Error("2-B: Card controlled by someone else. Failed second card.Start again. First card remains up, uncontrolled.");
 
         case "up":
-            if (card.controller === null) {
+            if (card.getController() === null) {
               // 2--
               card.control(player.id);
               player.setSelected([[row, col]]);
-              console.log(`[SECOND CARD] ${player.id} controls ${card.value}, at (${row}, ${col})`);}
-              break;
+              console.log(`[SECOND CARD] ${player.id} controls ${card.getValue()}, at (${row}, ${col})`);
+            }
+            break;
+
         case "down":
           card.flipUp();
           this.notifyChange();
           card.control(player.id); // 2D
           player.setSelected([[row, col]]);
           console.log(player.getSelected());
-          console.log(`[SECOND CARD] ${player.id} flipped ${card.value}, at (${row}, ${col})`);
+          console.log(`[SECOND CARD] ${player.id} flipped ${card.getValue()}, at (${row}, ${col})`);
           break;
         }
 
         console.log("checking now...");
-        if(firstCard.value === card.value){
-          // card.control(player.id);
-          // player.setSelected([firstPos, [row, col]]);
-          console.log(`[MATCH] ${player.id} found a pair: ${card.value}`);
+        if(firstCard.getValue() === card.getValue()){
+          console.log(`[MATCH] ${player.id} found a pair: ${card.getValue()}`);
       }else{
-        // player.setSelected([firstPos, [row, col]]);
-        firstCard.controller = null;
-        firstCard.state = "up";
-        card.controller = null;
-        card.state = "up";
-        // player.clearSelected();
+        firstCard.setController(null);
+        firstCard.setState("up");
+        card.setController(null);
+        card.setState("up");
         console.log(`[NO MATCH] `);
 
       }
@@ -396,24 +438,26 @@ export class Board {
               if (!card1 || !card2) throw new Error("Invalid stored card positions");
 
       
-              if (card1.value === card2.value && card1.controller === playerId && card2.controller === playerId) {
+              if (card1.getValue() === card2.getValue() && card1.getFlippedBy() === playerId && card2.getFlippedBy() === playerId) {
                 console.log("Player", player.id, "found match, cards are now being removed...");
-                console.log("Board state now:");
-                this.toString(player.id);
                   // 3-A: remove both
                 card1.remove();
                 console.log("Card 1 removed.");
-                console.log("Card 1 is", card1.state);
+                console.log("Card 1 is", card1.getState());
                 card2.remove();
                 console.log("Card 2 removed.");
-                console.log("Card 2 is", card2.state);
+                console.log("Card 2 is", card2.getState());
 
                 this.notifyChange();
               } else {
                   // 3-B: flip back IF not controlled by anyone
                   console.log("Player", player.id, "didn't find match. Cards are up, they are being FLIPPED DOWN IF NOT CONTROLLED ")
-                  if (card1.state !== "controlled") card1.reset();
-                  if (card2.state !== "controlled") card2.reset();
+                
+
+                  if (card1.getState() !== "controlled" && card1.getFlippedBy() == playerId) {
+                    card1.reset();}
+                  if (card2.getState() !== "controlled" && card2.getFlippedBy() == playerId) {
+                  card2.reset();}
                   this.notifyChange();
                   player.clearSelected();
 
@@ -433,8 +477,8 @@ export class Board {
             const card1 = this.grid[pos1[0]]![pos1[1]]!;
 
             if (!card1) throw new Error("Invalid stored card positions");
-            console.log(card1.state);
-            if (card1.controller !== player.id){
+            console.log(card1.getState());
+            if (card1.getController() == null && card1.getFlippedBy() == playerId) {
               card1.reset();
               this.notifyChange();
               player.clearSelected();
@@ -444,17 +488,7 @@ export class Board {
           }
           console.log("ARRAY IS: ", player.getSelected());
         }
-      
-    // private async waitForCard(row: number, col: number): Promise<void> {
-    //   const key = `${row},${col}`;
-    //   const deferred = new Deffered<void>();
-    //   if (!this.cardLocks.has(key)) {
-    //     this.cardLocks.set(key, []);
-    //     }
-    //   this.cardLocks.get(key)!.push(deferred);
-    //   console.log("Card at (", row, ",", col, ") is now locked. Waiters:", this.cardLocks.get(key)!.length);
-    //   await deferred.promise;
-    // }
+   
 
     private resolveWaiters(row: number, col: number): void {
       const key = `${row},${col}`;
@@ -471,11 +505,12 @@ export class Board {
       return `${this.rows}x${this.cols}\n` +
         this.grid.map(row =>
           row.map(card => {
-            switch(card.state) {
+            switch(card.getState()) {
               case "none": return "none -";
               case "down": return "down -";
-              case "up": return `up ${card.value}`;
-              case "controlled": return card.controller === playerId ? `my ${card.value}` : `up ${card.value}`;
+              case "up": return `up ${card.getValue()}`;
+              case "controlled": return card.getController() === playerId ? `my ${card.getValue()}` : `up ${card.getValue()}`;
+              default: throw new Error(`Unknown card state: ${card.getState()}`);
             }
           }).join('\n')
         ).join('\n');
@@ -495,19 +530,19 @@ export class Board {
           const card = this.grid[r]?.[c];
           if (!card) continue;
 
-            if (!valueMap.has(card.value)) {
-              valueMap.set(card.value, f(card.value));
+            if (!valueMap.has(card.getValue())) {
+              valueMap.set(card.getValue(), f(card.getValue()));
             }
 
             const p = (async () => {
-              const newValue = await valueMap.get(card.value)!;
+              const newValue = await valueMap.get(card.getValue())!;
               if (typeof newValue !== "string") {
-                throw new Error(`Invalid mapped value for ${card.value}: ${newValue}`);
+                throw new Error(`Invalid mapped value for ${card.getValue()}: ${newValue}`);
               }
               
-              console.log(`Mapping ${card.value} -> ${newValue}`);
+              console.log(`Mapping ${card.getValue()} -> ${newValue}`);
 
-              card.value = newValue;
+              card.setValue(newValue);
             })();
             
             transformPromises.push(p);

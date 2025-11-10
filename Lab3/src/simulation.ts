@@ -17,8 +17,8 @@ async function simulationMain(): Promise<void> {
     const filename = 'boards/simple.txt';
     const board: Board = await Board.parseFromFile(filename);
     const size = 5;
-    const players = 2;
-    const tries = 3;
+    const players = 4;
+    const tries = 100;
     const maxDelayMilliseconds = 100;
 
     // start up one or more players as concurrent asynchronous function calls
@@ -35,7 +35,8 @@ async function simulationMain(): Promise<void> {
 
         for (let jj = 0; jj < tries; ++jj) {
             try {
-                await timeout(Math.random() * maxDelayMilliseconds);
+                console.log("TRY NUMBER: ", jj);
+                await timeout(0.1 + Math.random() * (2 - 0.1));
                 // TODO try to flip over a first card at (randomInt(size), randomInt(size))
                 //      which might wait until this player can control that card
 

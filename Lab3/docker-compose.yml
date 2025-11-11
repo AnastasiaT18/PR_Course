@@ -1,16 +1,20 @@
-version: "3.9"
-
 services:
   game:
     build: .
+    volumes:
+      - .:/lab3
     ports:
       - "8080:8080"
-    command: npm start 8080 boards/perfect.txt
+    command: node dist/src/server.js 8080 boards/perfect.txt
 
   simulation:
     build: .
     command: npm run simulation
+    volumes:
+      - .:/lab3
 
   tests:
     build: .
     command: npm test
+    volumes:
+      - .:/lab3

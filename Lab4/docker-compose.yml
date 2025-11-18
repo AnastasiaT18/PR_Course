@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  leader:
+    build: .
+    container_name: leader
+    command: python3 leader.py
+
+    environment:
+      ROLE: leader
+      FOLLOWERS: follower1:5000,follower2:5000,follower3:5000,follower4:5000,follower5:5000
+      WRITE_QUORUM: 3
+      MIN_DELAY: 0.0001
+      MAX_DELAY: 0.01
+    ports:
+      - "5000:5000"
+
+  follower1:
+    build: .
+    container_name: follower1
+    environment:
+      ROLE: follower
+      FOLLOWER_ID: 1
+    command: ["python", "follower.py"]
+
+  follower2:
+    build: .
+    container_name: follower2
+    environment:
+      ROLE: follower
+      FOLLOWER_ID: 2
+    command: ["python", "follower.py"]
+
+  follower3:
+    build: .
+    container_name: follower3
+    environment:
+      ROLE: follower
+      FOLLOWER_ID: 3
+    command: ["python", "follower.py"]
+
+  follower4:
+    build: .
+    container_name: follower4
+    environment:
+      ROLE: follower
+      FOLLOWER_ID: 4
+    command: ["python", "follower.py"]
+
+  follower5:
+    build: .
+    container_name: follower5
+    environment:
+      ROLE: follower
+      FOLLOWER_ID: 5
+    command: ["python", "follower.py"]

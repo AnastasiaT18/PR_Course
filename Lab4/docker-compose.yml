@@ -5,13 +5,13 @@ services:
     build: .
     container_name: leader
     command: python3 leader.py
-
     environment:
       ROLE: leader
       FOLLOWERS: follower1:5000,follower2:5000,follower3:5000,follower4:5000,follower5:5000
       WRITE_QUORUM: 3
       MIN_DELAY: 0.0001
-      MAX_DELAY: 0.01
+      MAX_DELAY: 0.001
+
     ports:
       - "5000:5000"
 
@@ -22,6 +22,8 @@ services:
       ROLE: follower
       FOLLOWER_ID: 1
     command: ["python", "follower.py"]
+    ports:
+      - "5001:5000"  # host 5001 → container 5000
 
   follower2:
     build: .
@@ -30,6 +32,8 @@ services:
       ROLE: follower
       FOLLOWER_ID: 2
     command: ["python", "follower.py"]
+    ports:
+      - "5002:5000"
 
   follower3:
     build: .
@@ -38,6 +42,8 @@ services:
       ROLE: follower
       FOLLOWER_ID: 3
     command: ["python", "follower.py"]
+    ports:
+      - "5003:5000"
 
   follower4:
     build: .
@@ -46,6 +52,8 @@ services:
       ROLE: follower
       FOLLOWER_ID: 4
     command: ["python", "follower.py"]
+    ports:
+      - "5004:5000"
 
   follower5:
     build: .
@@ -54,3 +62,5 @@ services:
       ROLE: follower
       FOLLOWER_ID: 5
     command: ["python", "follower.py"]
+    ports:
+      - "5005:5000"

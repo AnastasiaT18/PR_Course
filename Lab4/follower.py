@@ -21,5 +21,13 @@ def replicate():
     return jsonify({"status": "ok"})
 
 
+
+@app.route("/read", methods=["GET"])
+def read():
+    key = request.args.get('key')
+    value = store.get(key)
+    return jsonify({"key": key, "value": value})
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

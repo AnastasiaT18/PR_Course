@@ -12,7 +12,7 @@ lock = threading.Lock()
 
 
 FOLLOWERS = os.getenv("FOLLOWERS", "").split(",")
-QUORUM = os.getenv("WRITE_QUORUM", "1")
+DEFAULT_QUORUM = os.getenv("WRITE_QUORUM", "1")
 MIN_DELAY = float(os.getenv("MIN_DELAY", "0"))
 MAX_DELAY = float(os.getenv("MAX_DELAY", "0"))
 
@@ -31,6 +31,7 @@ def write():
     data = request.get_json()
     key = data["key"]
     value = data["value"]
+    quorum = data.get("quorum", DEFAULT_QUORUM)
 
     store[key] = value
 
@@ -42,18 +43,22 @@ def write():
     # for t in threads:
     #     t.join()
      # semi-sync wait with timeout
+
     start_time = time.time()
+    
     timeout = 2  # seconds
     while True:
         success = sum(1 for r in results if r)
-        print(int(QUORUM), flush=True)
-        if success >= int(QUORUM):
+        # print("Current success count:", success, flush=True)
+        # print(int(quorum), flush=True)
+        if success >= int(quorum):
+            print("Quorum reached", flush=True)
             break
         if time.time() - start_time > timeout:
             return jsonify({"status": "failed", "success": success}), 500
-        time.sleep(0.001)
+        # time.sleep(0.001)
 
-    print(results, success, store, flush=True)
+    # print(results, success, store, flush=True)
     return jsonify({"status": "ok", "success": success}), 200
 
     

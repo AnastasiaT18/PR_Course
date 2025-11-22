@@ -8,7 +8,7 @@ services:
     environment:
       ROLE: leader
       FOLLOWERS: follower1:5000,follower2:5000,follower3:5000,follower4:5000,follower5:5000
-      WRITE_QUORUM: 3
+      WRITE_QUORUM: 2
       MIN_DELAY: 0.0001
       MAX_DELAY: 0.001
 

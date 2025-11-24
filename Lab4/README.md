@@ -219,6 +219,11 @@ After all runs, a plot was generated:
 
 As expected, increasing the write quorum makes the write latency go up.
 
+Updated lab task: 100 writes, 10 threads, 10 keys:
+
+<img src="plot.png" alt="Quorum values vs Latency2" width="400">
+
+
 ## 6. Consistency Check
 After all writes finished, the script compared the leader’s values with each follower:
 ```

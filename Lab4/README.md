@@ -51,8 +51,8 @@ services:
       ROLE: leader
       FOLLOWERS: follower1:5000,follower2:5000,follower3:5000,follower4:5000,follower5:5000
       WRITE_QUORUM: 2
-      MIN_DELAY: 0.0001
-      MAX_DELAY: 0.001
+      MIN_DELAY: 0
+      MAX_DELAY: 1
 
     ports:
       - "5000:5000"
@@ -154,17 +154,17 @@ def write():
 
 
     def replicate_to_follower(follower, key, value, results):
-    delay = random.uniform(MIN_DELAY, MAX_DELAY)
-    time.sleep(delay)
-    
-    try:
-        r = requests.post(f"http://{follower}/replicate", json={"key": key, "value": value})   
-        with lock:
-            results.append(r.status_code == 200)
-    except:
-        with lock:
-            results.append(False)
-```
+      delay = random.uniform(MIN_DELAY, MAX_DELAY)
+      time.sleep(delay)
+      
+      try:
+          r = requests.post(f"http://{follower}/replicate", json={"key": key, "value": value})   
+          with lock:
+              results.append(r.status_code == 200)
+      except:
+          with lock:
+              results.append(False)
+  ```
 
 ### Followers
 
@@ -193,7 +193,7 @@ for f in FOLLOWERS:
         assert fr.status_code == 200
         assert fr.json()["value"] == value, f"Follower {f} does NOT have replicated data!"
 
-print("✓ Replication integration test passed successfully!")
+print("Replication integration test passed successfully!")
 
 ```
 
@@ -215,7 +215,7 @@ def write_one(key, value, quorum):
 For quorum values from 1 to 5, the performance test collected average latency.
 After all runs, a plot was generated:
 
-<img src="plot.png" alt="Quorum values vs Latency" width="400">
+<img src="plot_big.png" alt="Quorum values vs Latency" width="400">
 
 As expected, increasing the write quorum makes the write latency go up.
 

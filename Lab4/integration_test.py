@@ -28,13 +28,14 @@ def test():
     assert store.json()["value"] == value, "Leader does not have the correct value!"
 
 
-# 4. Check followers
+
     for f in FOLLOWERS:
         fr = requests.get(f"{f}/read?key={key}")
         assert fr.status_code == 200
+        print(fr.json())
         assert fr.json()["value"] == value, f"Follower {f} does NOT have replicated data!"
 
-    print("✓ Replication integration test passed successfully!")
+    print("Replication integration test passed successfully!")
     
 
 

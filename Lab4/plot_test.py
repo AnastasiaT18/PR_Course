@@ -3,14 +3,12 @@ import threading
 import time
 import requests
 import matplotlib.pyplot as plt
-
-
 import requests
 
 
-THREADS = 15
-WRITES = 10000
-KEYS = 100
+THREADS = 10
+WRITES = 100
+KEYS = 10
 
 LEADER = "http://localhost:5000"
 FOLLOWERS = [
@@ -69,12 +67,8 @@ def main():
     avg_latencies = []
 
     for q in range(quorum):
-
         print(f"Running test with QUORUM={q+1}", flush=True)
         avg_latencies.append(run(q+1))
-
-
-
 
     plt.plot(range(1, quorum+1), avg_latencies, marker='o')
     plt.xlabel("WRITE_QUORUM")
@@ -87,13 +81,9 @@ def main():
     print(avg_latencies)
 
 
-
-
 def check_replications():
-
     leader = {}
     per_follower_matches = {f: 0 for f in FOLLOWERS}
-   
 
     for key in range(KEYS):
         r = requests.get(f"{LEADER}/read?key={key}")
